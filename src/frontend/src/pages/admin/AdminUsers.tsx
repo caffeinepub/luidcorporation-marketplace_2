@@ -2,9 +2,11 @@ import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminLayout from "../../components/AdminLayout";
 import { useActor } from "../../hooks/useActor";
+import { useInternetIdentity } from "../../hooks/useInternetIdentity";
 
 export default function AdminUsers() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
   const qc = useQueryClient();
 
   const { data: users = [], isLoading } = useQuery({
@@ -13,7 +15,12 @@ export default function AdminUsers() {
     enabled: !!actor,
   });
 
-  const toggleMut = useMutation({
+  const suspendMut = useMutation({
+    mutationFn: (p: Principal) => actor!.suspendUser(p),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminUsers"] }),
+  });
+
+  const activateMut = useMutation({
     mutationFn: (p: Principal) => actor!.toggleUserStatus(p),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["adminUsers"] }),
   });
@@ -22,6 +29,13 @@ export default function AdminUsers() {
     mutationFn: (p: Principal) => actor!.promoteToAdmin(p),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["adminUsers"] }),
   });
+
+  const demoteMut = useMutation({
+    mutationFn: (p: Principal) => actor!.demoteFromAdmin(p),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminUsers"] }),
+  });
+
+  const callerPrincipal = identity?.getPrincipal().toString();
 
   const formatDate = (ns: bigint) =>
     new Date(Number(ns / 1_000_000n)).toLocaleDateString("pt-BR");
@@ -56,73 +70,105 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr
-                  key={u.userPrincipal.toString()}
-                  className="border-t border-gray-100"
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">
-                      {u.username}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {truncate(u.userPrincipal.toString())}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
-                    {u.email}
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.isAdmin ? (
-                      <span className="neon-badge text-xs px-2 py-0.5 rounded-full font-semibold">
-                        Admin
-                      </span>
-                    ) : (
-                      <span className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-semibold">
-                        Cliente
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                        u.isActive
-                          ? "bg-green-50 text-green-700"
-                          : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {u.isActive ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">
-                    {formatDate(u.createdAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => toggleMut.mutate(u.userPrincipal)}
-                        className="text-xs text-orange-500 hover:underline"
-                      >
-                        {u.isActive ? "Desativar" : "Ativar"}
-                      </button>
-                      {!u.isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => promoteMut.mutate(u.userPrincipal)}
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          Promover
-                        </button>
+              {users.map((u, idx) => {
+                const isSelf = u.userPrincipal.toString() === callerPrincipal;
+                return (
+                  <tr
+                    key={u.userPrincipal.toString()}
+                    data-ocid={`users.item.${idx + 1}`}
+                    className="border-t border-gray-100"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">
+                        {u.username}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {truncate(u.userPrincipal.toString())}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
+                      {u.email}
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.isAdmin ? (
+                        <span className="neon-badge text-xs px-2 py-0.5 rounded-full font-semibold">
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-semibold">
+                          Cliente
+                        </span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          u.isActive
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        {u.isActive ? "Ativo" : "Suspenso"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">
+                      {formatDate(u.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 flex-wrap">
+                        {u.isActive ? (
+                          !isSelf && (
+                            <button
+                              type="button"
+                              data-ocid={`users.delete_button.${idx + 1}`}
+                              onClick={() => suspendMut.mutate(u.userPrincipal)}
+                              className="text-xs text-red-500 hover:underline"
+                            >
+                              Suspender
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            type="button"
+                            data-ocid={`users.edit_button.${idx + 1}`}
+                            onClick={() => activateMut.mutate(u.userPrincipal)}
+                            className="text-xs text-green-600 hover:underline"
+                          >
+                            Ativar
+                          </button>
+                        )}
+                        {!u.isAdmin && (
+                          <button
+                            type="button"
+                            data-ocid={`users.secondary_button.${idx + 1}`}
+                            onClick={() => promoteMut.mutate(u.userPrincipal)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            Promover
+                          </button>
+                        )}
+                        {u.isAdmin && !isSelf && (
+                          <button
+                            type="button"
+                            data-ocid={`users.toggle.${idx + 1}`}
+                            onClick={() => demoteMut.mutate(u.userPrincipal)}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            Remover Admin
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {users.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
+            <div
+              data-ocid="users.empty_state"
+              className="text-center py-12 text-gray-400"
+            >
               Nenhum utilizador registado ainda.
             </div>
           )}

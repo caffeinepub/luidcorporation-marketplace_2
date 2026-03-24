@@ -165,6 +165,8 @@ export interface backendInterface {
     registerUser(username: string, email: string): Promise<string>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     toggleUserStatus(targetPrincipal: Principal): Promise<string>;
+    suspendUser(targetPrincipal: Principal): Promise<string>;
+    demoteFromAdmin(targetPrincipal: Principal): Promise<string>;
 }
 import type { Purchase as _Purchase, Script as _Script, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -544,6 +546,35 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.toggleUserStatus(arg0);
+            return result;
+        }
+    }
+
+    async suspendUser(arg0: Principal): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.suspendUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.suspendUser(arg0);
+            return result;
+        }
+    }
+    async demoteFromAdmin(arg0: Principal): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.demoteFromAdmin(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.demoteFromAdmin(arg0);
             return result;
         }
     }

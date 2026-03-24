@@ -266,6 +266,41 @@ actor {
     };
   };
 
+  public shared ({ caller }) func demoteFromAdmin(targetPrincipal : Principal) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized");
+    };
+    if (caller == targetPrincipal) {
+      Runtime.trap("Cannot remove your own admin role");
+    };
+    switch (persistentProfileData.get(targetPrincipal)) {
+      case null { Runtime.trap("User not found") };
+      case (?profile) {
+        if (not profile.isAdmin) { Runtime.trap("User is not an admin") };
+        persistentProfileData.add(targetPrincipal, { profile with isAdmin = false });
+        accessControlState.userRoles.add(targetPrincipal, #user);
+        "Admin role removed successfully";
+      };
+    };
+  };
+
+  public shared ({ caller }) func suspendUser(targetPrincipal : Principal) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized");
+    };
+    if (caller == targetPrincipal) {
+      Runtime.trap("Cannot suspend your own account");
+    };
+    switch (persistentProfileData.get(targetPrincipal)) {
+      case null { Runtime.trap("User not found") };
+      case (?profile) {
+        if (not profile.isActive) { Runtime.trap("User is already suspended") };
+        persistentProfileData.add(targetPrincipal, { profile with isActive = false });
+        "User account suspended successfully";
+      };
+    };
+  };
+
   public shared ({ caller }) func toggleUserStatus(targetPrincipal : Principal) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized");

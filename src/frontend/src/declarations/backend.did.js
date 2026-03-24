@@ -143,6 +143,8 @@ export const idlService = IDL.Service({
   'registerUser' : IDL.Func([IDL.Text, IDL.Text], [IDL.Text], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'toggleUserStatus' : IDL.Func([IDL.Principal], [IDL.Text], []),
+  'suspendUser' : IDL.Func([IDL.Principal], [IDL.Text], []),
+  'demoteFromAdmin' : IDL.Func([IDL.Principal], [IDL.Text], []),
 });
 
 export const idlInitArgs = [];
@@ -283,6 +285,8 @@ export const idlFactory = ({ IDL }) => {
     'registerUser' : IDL.Func([IDL.Text, IDL.Text], [IDL.Text], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'toggleUserStatus' : IDL.Func([IDL.Principal], [IDL.Text], []),
+  'suspendUser' : IDL.Func([IDL.Principal], [IDL.Text], []),
+  'demoteFromAdmin' : IDL.Func([IDL.Principal], [IDL.Text], []),
   });
 };
 

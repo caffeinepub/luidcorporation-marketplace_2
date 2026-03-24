@@ -52,6 +52,7 @@ export interface backendInterface {
     adminGetStats(): Promise<string>;
     adminUpdateScript(id: bigint, title: string, description: string, version: string, price: bigint, language: string, category: string, requirements: string, changelog: string, fileKey: string, accessKey: string, imageKey: string, isActive: boolean): Promise<string>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    demoteFromAdmin(targetPrincipal: Principal): Promise<string>;
     getAllScripts(): Promise<Array<Script>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -64,5 +65,6 @@ export interface backendInterface {
     purchaseScript(scriptId: bigint): Promise<string>;
     registerUser(username: string, email: string): Promise<string>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    suspendUser(targetPrincipal: Principal): Promise<string>;
     toggleUserStatus(targetPrincipal: Principal): Promise<string>;
 }

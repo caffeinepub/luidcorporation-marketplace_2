@@ -125,6 +125,8 @@ export interface _SERVICE {
   'registerUser' : ActorMethod<[string, string], string>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'toggleUserStatus' : ActorMethod<[Principal], string>,
+  'suspendUser' : ActorMethod<[Principal], string>,
+  'demoteFromAdmin' : ActorMethod<[Principal], string>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
