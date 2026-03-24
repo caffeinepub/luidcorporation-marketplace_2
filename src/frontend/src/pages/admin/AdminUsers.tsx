@@ -116,18 +116,17 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 flex-wrap">
-                        {u.isActive ? (
-                          !isSelf && (
-                            <button
-                              type="button"
-                              data-ocid={`users.delete_button.${idx + 1}`}
-                              onClick={() => suspendMut.mutate(u.userPrincipal)}
-                              className="text-xs text-red-500 hover:underline"
-                            >
-                              Suspender
-                            </button>
-                          )
-                        ) : (
+                        {u.isActive && !isSelf && (
+                          <button
+                            type="button"
+                            data-ocid={`users.delete_button.${idx + 1}`}
+                            onClick={() => suspendMut.mutate(u.userPrincipal)}
+                            className="text-xs text-red-500 hover:underline"
+                          >
+                            Desativar
+                          </button>
+                        )}
+                        {!u.isActive && (
                           <button
                             type="button"
                             data-ocid={`users.edit_button.${idx + 1}`}
