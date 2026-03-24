@@ -4,7 +4,6 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
 import Time "mo:core/Time";
-import Order "mo:core/Order";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
@@ -54,12 +53,21 @@ actor {
 
   stable var scripts = Map.empty<Nat, Script>();
   stable var nextScriptId = 0;
-
   stable var purchases = Map.empty<Nat, Purchase>();
   stable var nextPurchaseId = 0;
-
   stable var persistentProfileData : ProfileState = Map.empty<Principal, UserProfile>();
   stable var firstUserRegistered = false;
+
+  system func postupgrade() {
+    for ((principal, profile) in persistentProfileData.entries()) {
+      if (profile.isAdmin) {
+        accessControlState.userRoles.add(principal, #admin);
+        accessControlState.adminAssigned := true;
+      } else {
+        accessControlState.userRoles.add(principal, #user);
+      };
+    };
+  };
 
   func getNextScriptId() : Nat {
     let id = nextScriptId;
@@ -77,13 +85,11 @@ actor {
     scripts.get(id);
   };
 
-  // User registration - first user becomes admin
   public shared ({ caller }) func registerUser(username : Text, email : Text) : async Text {
     switch (persistentProfileData.get(caller)) {
       case (?_) { Runtime.trap("User already registered") };
       case null {};
     };
-
     let isAdmin = not firstUserRegistered;
     let newProfile : UserProfile = {
       userPrincipal = caller;
@@ -93,10 +99,7 @@ actor {
       isActive = true;
       createdAt = Time.now();
     };
-
     persistentProfileData.add(caller, newProfile);
-
-    // Assign role directly to avoid admin-check in assignRole
     if (isAdmin) {
       firstUserRegistered := true;
       accessControlState.userRoles.add(caller, #admin);
@@ -104,7 +107,6 @@ actor {
     } else {
       accessControlState.userRoles.add(caller, #user);
     };
-
     if (isAdmin) { "User registered as admin" } else { "User registered successfully" };
   };
 
@@ -149,14 +151,13 @@ actor {
       case (?script) {
         if (not script.isActive) { Runtime.trap("Script is not active") };
         let id = getNextPurchaseId();
-        let newPurchase : Purchase = {
+        purchases.add(id, {
           id;
           buyerPrincipal = caller;
           scriptId;
           purchasedAt = Time.now();
           accessKey = script.accessKey;
-        };
-        purchases.add(id, newPurchase);
+        });
         switch (script.accessKey) {
           case (?key) { "Purchase successful. Access key: " # key };
           case null { "Purchase successful. Download info: " # script.fileKey };
